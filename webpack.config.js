@@ -92,6 +92,5 @@ module.exports = {
       filename: "./css/[name].css",
       chunkFilename: "./css/[id].css",
     }),
-    new CopyPlugin([{ from: "./src/client/Assets", to: "assets" }]),
   ],
 };
