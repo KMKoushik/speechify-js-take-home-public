@@ -7,29 +7,72 @@ import {
 } from "@common/client";
 
 export default class SpeechifyClientImpl implements SpeechifyClient {
-  constructor(host: string) {}
+  playing: ClientState;
+  host: string;
+  queue: number;
+  utterance: SpeechSynthesisUtterance | null;
+  listener?: (event: SpeechifyClientEvent) => void;
+
+  constructor(host: string) {
+    this.playing = ClientState.NOT_PLAYING;
+    this.host = host;
+    this.queue = 0;
+    this.utterance = null;
+  }
 
   async addToQueue(data: Data): Promise<boolean> {
-    window.alert("addToQueue client method not implemented");
-    throw new Error("method not implemented");
+    const resp = await fetch(`${this.host}/api/addToQueue`, {
+      method: 'POST', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'}
+    })
+    const result = await resp.json();
+    this.queue += result.queue;
+    if (this.playing === ClientState.PLAYING && this.utterance === null) {
+      this.getNextChunk();
+    }
+    return result.success;
   }
 
   play(): void {
-    window.alert("play client method not implemented");
-    throw new Error("method not implemented");
+    if(this.utterance === null) {
+      this.getNextChunk();
+    }
+    speechSynthesis.resume();
+
+    this.playing = ClientState.PLAYING;
+    this.listener?.({ type: ClientEventType.STATE, state: ClientState.PLAYING });
   }
 
   pause(): void {
-    window.alert("pause client method not implemented");
-    throw new Error("method not implemented");
+    speechSynthesis.pause();
+    this.playing = ClientState.NOT_PLAYING;
+    this.listener?.({ type: ClientEventType.STATE, state: ClientState.NOT_PLAYING });
   }
 
   getState(): ClientState {
-    return ClientState.NOT_PLAYING;
+    if (!speechSynthesis.paused && speechSynthesis.speaking) {
+      this.playing = ClientState.PLAYING;
+    }
+    return this.playing;
   }
 
   subscribe(listener: (event: SpeechifyClientEvent) => void): () => void {
-    window.alert("subscribe client method not implemented");
-    return () => {};
+    this.listener = listener;
+    return () => { this.listener = undefined };
+  }
+
+  async getNextChunk(){
+    const resp = await fetch(`${this.host}/api/getNextChunk`);
+    const { chunk } = await resp.json();
+    if (chunk?.data) {
+      const utterance = new window.SpeechSynthesisUtterance(chunk?.data);
+      utterance.lang = "en-US";
+      utterance.rate = 0.9; 
+      this.utterance = utterance;
+      this.utterance.onend = () => { this.getNextChunk() }
+      speechSynthesis.speak(utterance);
+      speechSynthesis.resume();
+    } else {
+      this.utterance = null;
+    }
   }
 }
