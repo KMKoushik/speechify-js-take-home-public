@@ -9,14 +9,12 @@ import {
 export default class SpeechifyClientImpl implements SpeechifyClient {
   playing: ClientState;
   host: string;
-  queue: number;
   utterance: SpeechSynthesisUtterance | null;
   listener?: (event: SpeechifyClientEvent) => void;
 
   constructor(host: string) {
     this.playing = ClientState.NOT_PLAYING;
     this.host = host;
-    this.queue = 0;
     this.utterance = null;
   }
 
@@ -25,7 +23,6 @@ export default class SpeechifyClientImpl implements SpeechifyClient {
       method: 'POST', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'}
     })
     const result = await resp.json();
-    this.queue += result.queue;
     if (this.playing === ClientState.PLAYING && this.utterance === null) {
       this.getNextChunk();
     }

@@ -44,7 +44,7 @@ const parseTxt = (text: Data) => {
 
 
 /**
- * Large content should be split into multiple small sentences for best experience.
+ * Large content can be split into multiple small sentences for best experience.
  * So even if browser is closed and opened again, there will be less loss. For simplicity I am splitting sentences with new line "\n".
  */
 
